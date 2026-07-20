@@ -310,11 +310,11 @@ const costPerSecond = { '720p': 0.40, '1080p': 0.55, '4k': 1.20 }; // ajustar se
 
 const persist = {
   async load(){
-    try{ const res = await window.storage.get('latranca:scenes'); return res ? JSON.parse(res.value) : []; }
+    try{ const raw = localStorage.getItem('latranca:scenes'); return raw ? JSON.parse(raw) : []; }
     catch(e){ return []; }
   },
   async save(){
-    try{ await window.storage.set('latranca:scenes', JSON.stringify(scenes)); }
+    try{ localStorage.setItem('latranca:scenes', JSON.stringify(scenes)); }
     catch(e){ console.error(e); }
   }
 };
