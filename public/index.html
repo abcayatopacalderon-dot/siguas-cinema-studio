@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Tranca — Estudio Siguas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;700;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --hide:#efe4cb;
+    --leather:#4a331f;
+    --leather-line:#5c4128;
+    --saddle:#1c140d;
+    --panel:#241a11;
+    --dust:#9a8a6c;
+    --rust:#c06a35;
+    --rust-bright:#e08a4f;
+    --ink:#17110a;
+    --ok:#7a9d5c;
+    --warn:#d9a441;
+    --err:#d16b5a;
+    --font-sign:'Bitter', Georgia, serif;
+    --font-body:'Inter', -apple-system, sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--saddle); color:var(--hide); font-family:var(--font-body);
+    min-height:100vh;
+  }
+  ::selection{ background:var(--rust); color:var(--ink); }
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--leather-line); border-radius:4px; }
+
+  /* ---- top nav ---- */
+  .topnav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 1.5rem; height:58px; border-bottom:1px solid var(--leather-line);
+    background:var(--panel); position:sticky; top:0; z-index:20;
+  }
+  .nav-left{ display:flex; align-items:center; gap:1.8rem; }
+  .logo{ display:flex; align-items:center; gap:8px; }
+  .logo svg{ width:22px; height:18px; }
+  .logo-text{ font-family:var(--font-sign); font-weight:900; font-size:1.05rem; letter-spacing:0.02em; color:var(--hide); }
+  .nav-tabs{ display:flex; gap:1.5rem; }
+  .nav-tab{
+    font-size:0.85rem; color:var(--dust); cursor:pointer; padding:0.4rem 0;
+    border-bottom:2px solid transparent; transition:all .15s;
+  }
+  .nav-tab.active{ color:var(--hide); border-bottom-color:var(--rust-bright); font-weight:500; }
+  .nav-tab:hover{ color:var(--hide); }
+  .nav-right{ display:flex; align-items:center; gap:1rem; }
+  .credits-pill{
+    display:flex; align-items:center; gap:6px; background:rgba(224,138,79,0.12);
+    border:1px solid var(--rust); color:var(--rust-bright); font-family:var(--font-mono);
+    font-size:0.78rem; padding:0.4rem 0.8rem; border-radius:20px;
+  }
+  .avatar{
+    width:30px; height:30px; border-radius:50%; background:var(--leather);
+    border:1px solid var(--rust); display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-sign); font-size:0.8rem; color:var(--rust-bright);
+  }
+
+  /* ---- layout ---- */
+  main{ display:grid; grid-template-columns:360px 1fr; min-height:calc(100vh - 58px); }
+  @media (max-width:960px){ main{ grid-template-columns:1fr; } }
+
+  .create-panel{
+    border-right:1px solid var(--leather-line); background:var(--panel);
+    padding:1.4rem; overflow-y:auto; display:flex; flex-direction:column; gap:1.3rem;
+  }
+  .panel-tabs{ display:flex; gap:0.4rem; background:var(--saddle); padding:3px; border-radius:8px; }
+  .panel-tab{
+    flex:1; text-align:center; font-size:0.78rem; padding:0.5rem 0; border-radius:6px;
+    cursor:pointer; color:var(--dust); transition:all .15s;
+  }
+  .panel-tab.active{ background:var(--leather); color:var(--hide); }
+
+  .field-label{ font-size:0.68rem; text-transform:uppercase; letter-spacing:0.09em; color:var(--dust); margin-bottom:0.5rem; display:block; }
+
+  .upload-zone{
+    border:1.5px dashed var(--leather-line); border-radius:10px; padding:1.2rem;
+    text-align:center; cursor:pointer; transition:all .15s; background:rgba(0,0,0,0.15);
+  }
+  .upload-zone:hover, .upload-zone.dragover{ border-color:var(--rust-bright); background:rgba(224,138,79,0.06); }
+  .upload-zone i{ font-size:22px; color:var(--dust); }
+  .upload-zone .up-title{ font-size:0.85rem; color:var(--hide); margin-top:0.5rem; font-weight:500; }
+  .upload-zone .up-sub{ font-size:0.72rem; color:var(--dust); margin-top:0.2rem; }
+
+  .ref-strip{ display:flex; gap:8px; margin-top:0.8rem; flex-wrap:wrap; }
+  .ref-thumb{
+    position:relative; width:64px; height:64px; border-radius:6px; overflow:hidden;
+    border:1px solid var(--leather-line); flex-shrink:0;
+  }
+  .ref-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .ref-thumb button{
+    position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%;
+    background:rgba(0,0,0,0.7); color:var(--hide); border:none; cursor:pointer; font-size:11px;
+    display:flex; align-items:center; justify-content:center; line-height:1;
+  }
+  .ref-thumb .ref-badge{
+    position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6);
+    color:var(--dust); font-size:0.55rem; text-align:center; padding:1px 0;
+  }
+
+  input[type=text], textarea{
+    width:100%; background:rgba(0,0,0,0.25); border:1px solid var(--leather-line);
+    color:var(--hide); border-radius:8px; padding:0.65rem 0.8rem; font-family:var(--font-body); font-size:0.87rem;
+  }
+  input[type=text]:focus, textarea:focus{ outline:none; border-color:var(--rust-bright); }
+  textarea{ min-height:90px; resize:vertical; line-height:1.5; }
+
+  .chip-row{ display:flex; gap:6px; margin-top:0.5rem; flex-wrap:wrap; }
+  .chip{
+    font-size:0.72rem; color:var(--dust); border:1px solid var(--leather-line);
+    padding:0.3rem 0.65rem; border-radius:14px; cursor:pointer; transition:all .15s;
+  }
+  .chip:hover{ border-color:var(--rust); color:var(--hide); }
+
+  .params-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0.7rem; }
+  select{
+    width:100%; background:rgba(0,0,0,0.25); border:1px solid var(--leather-line);
+    color:var(--hide); border-radius:8px; padding:0.55rem 0.7rem; font-size:0.82rem;
+  }
+
+  .generate-btn{
+    width:100%; background:linear-gradient(180deg, var(--rust-bright), var(--rust));
+    color:var(--ink); border:none; padding:0.85rem; border-radius:10px;
+    font-weight:700; font-size:0.92rem; cursor:pointer; display:flex;
+    align-items:center; justify-content:center; gap:8px; font-family:var(--font-body);
+  }
+  .generate-btn:hover{ filter:brightness(1.06); }
+  .generate-btn:disabled{ opacity:0.4; cursor:not-allowed; filter:none; }
+  .generate-btn .cost{ font-family:var(--font-mono); font-size:0.8rem; opacity:0.75; }
+
+  .enhance-btn{
+    width:100%; background:none; border:1px solid var(--leather-line); color:var(--hide);
+    padding:0.6rem; border-radius:8px; font-size:0.82rem; cursor:pointer;
+  }
+  .enhance-btn:hover{ border-color:var(--dust); }
+
+  /* ---- gallery ---- */
+  .gallery-area{ padding:1.6rem 2rem; overflow-y:auto; }
+  .gallery-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:1.3rem; flex-wrap:wrap; gap:0.8rem; }
+  .gallery-head h2{ font-family:var(--font-sign); font-size:1.2rem; font-weight:700; }
+  .filter-tabs{ display:flex; gap:0.4rem; }
+  .filter-tab{
+    font-size:0.78rem; color:var(--dust); padding:0.4rem 0.9rem; border-radius:16px;
+    border:1px solid var(--leather-line); cursor:pointer;
+  }
+  .filter-tab.active{ background:var(--leather); color:var(--hide); border-color:var(--rust); }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:1rem; }
+  .card{
+    background:var(--panel); border:1px solid var(--leather-line); border-radius:12px;
+    overflow:hidden; cursor:pointer; transition:all .15s;
+  }
+  .card:hover{ border-color:var(--rust); transform:translateY(-2px); }
+  .card-thumb{
+    aspect-ratio:16/9; background:var(--saddle); display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden;
+  }
+  .card-thumb img{ width:100%; height:100%; object-fit:cover; }
+  .card-thumb .placeholder{ color:var(--leather-line); font-size:32px; }
+  .card-thumb .badge{
+    position:absolute; top:8px; left:8px; font-size:0.6rem; font-family:var(--font-mono);
+    background:rgba(0,0,0,0.6); color:var(--rust-bright); padding:2px 7px; border-radius:10px;
+    border:1px solid var(--rust);
+  }
+  .card-thumb .status{
+    position:absolute; bottom:8px; right:8px; font-size:0.62rem; text-transform:uppercase;
+    padding:3px 8px; border-radius:10px; font-family:var(--font-mono); letter-spacing:0.04em;
+  }
+  .status.processing{ background:rgba(217,164,65,0.85); color:#2a1c05; }
+  .status.done{ background:rgba(122,157,92,0.85); color:#1a2610; }
+  .status.error{ background:rgba(209,107,90,0.85); color:#2c0f09; }
+  .status.empty{ background:rgba(154,138,108,0.5); color:var(--saddle); }
+  .card-body{ padding:0.8rem 0.9rem; }
+  .card-title{ font-size:0.85rem; font-weight:500; color:var(--hide); }
+  .card-meta{ font-size:0.7rem; color:var(--dust); margin-top:0.3rem; font-family:var(--font-mono); }
+
+  .new-card{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    aspect-ratio:16/10; border:1.5px dashed var(--leather-line); border-radius:12px;
+    color:var(--dust); cursor:pointer; transition:all .15s;
+  }
+  .new-card:hover{ border-color:var(--rust-bright); color:var(--hide); }
+  .new-card span{ font-size:0.82rem; }
+
+  .empty-hint{ text-align:center; padding:3rem 1rem; color:var(--dust); }
+  .empty-hint h3{ font-family:var(--font-sign); color:var(--hide); font-size:1.1rem; margin-bottom:0.4rem; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-left">
+    <div class="logo">
+      <svg viewBox="0 0 34 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 4C9 4 4 8 4 15C4 20 8 24 12 24" stroke="#c06a35" stroke-width="3" stroke-linecap="round"/>
+        <path d="M25 4C25 4 30 8 30 15C30 20 26 24 22 24" stroke="#c06a35" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="logo-text">La Tranca</span>
+    </div>
+    <div class="nav-tabs">
+      <div class="nav-tab active">Crear escena</div>
+      <div class="nav-tab">Galería</div>
+      <div class="nav-tab">Guion completo</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="credits-pill"><span>◆</span><span id="costHeader">$0.00 usados</span></div>
+    <div class="avatar">AC</div>
+  </div>
+</nav>
+
+<main>
+  <aside class="create-panel">
+    <div class="panel-tabs">
+      <div class="panel-tab active">Texto a video</div>
+      <div class="panel-tab">Imagen a video</div>
+    </div>
+
+    <div>
+      <label class="field-label">Imágenes de referencia (hasta 3)</label>
+      <div class="upload-zone" id="uploadZone">
+        <i>⤒</i>
+        <div class="up-title">Sube fotos de personaje o locación</div>
+        <div class="up-sub">Mantiene consistencia visual entre escenas · Veo 3.1 admite hasta 3</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+      <div class="ref-strip" id="refStrip"></div>
+    </div>
+
+    <div>
+      <label class="field-label">Título de la escena</label>
+      <input type="text" id="titleInput" placeholder="Ej: Siguas cruza el Marañón">
+    </div>
+
+    <div>
+      <label class="field-label">Prompt cinematográfico</label>
+      <textarea id="promptInput" placeholder="Describe encuadre, movimiento de cámara, luz, atmósfera, sonido..."></textarea>
+      <div class="chip-row">
+        <span class="chip" data-add=" — plano general, luz de atardecer">+ Atardecer</span>
+        <span class="chip" data-add=" — niebla baja sobre el agua">+ Niebla</span>
+        <span class="chip" data-add=" — cámara al hombro, tenso">+ Tenso</span>
+        <span class="chip" data-add=" — travelling lateral lento">+ Travelling</span>
+      </div>
+    </div>
+
+    <div>
+      <label class="field-label">Elementos a evitar</label>
+      <textarea id="negInput" style="min-height:60px" placeholder="Texto en pantalla, marcas de agua, deformaciones..."></textarea>
+    </div>
+
+    <div class="params-grid">
+      <div>
+        <label class="field-label">Duración</label>
+        <select id="durationSelect">
+          <option value="4">4s</option>
+          <option value="8" selected>8s</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Formato</label>
+        <select id="aspectSelect">
+          <option value="16:9" selected>16:9</option>
+          <option value="9:16">9:16</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="enhance-btn" id="enhanceBtn">Enriquecer prompt con Claude</button>
+
+    <button class="generate-btn" id="generateBtn">
+      Generar toma <span class="cost" id="costPreview">≈ $3.20</span>
+    </button>
+  </aside>
+
+  <section class="gallery-area">
+    <div class="gallery-head">
+      <h2>Escenas de la faena</h2>
+      <div class="filter-tabs">
+        <div class="filter-tab active" data-filter="all">Todas</div>
+        <div class="filter-tab" data-filter="done">Listas</div>
+        <div class="filter-tab" data-filter="processing">Generando</div>
+        <div class="filter-tab" data-filter="empty">Sin generar</div>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<script>
+let scenes = [];
+let activeSceneId = null;
+let refImages = []; // dataURLs for the scene currently being edited
+let currentFilter = 'all';
+const costPerSecond = 0.40;
+
+const persist = {
+  async load(){
+    try{ const res = await window.storage.get('latranca:scenes'); return res ? JSON.parse(res.value) : []; }
+    catch(e){ return []; }
+  },
+  async save(){
+    try{ await window.storage.set('latranca:scenes', JSON.stringify(scenes)); }
+    catch(e){ console.error(e); }
+  }
+};
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function brandTag(n){ return 'ST-' + String(1000 + n * 137 % 9000).padStart(4,'0'); }
+
+function newScene(n){
+  return { id: uid(), number:n, title:'', prompt:'', negativePrompt:'', duration:'8', aspect:'16:9', refImages:[], takes:[] };
+}
+
+async function init(){
+  scenes = await persist.load();
+  activeSceneId = null;
+  bindStaticEvents();
+  render();
+}
+
+function loadIntoPanel(scene){
+  activeSceneId = scene.id;
+  document.getElementById('titleInput').value = scene.title || '';
+  document.getElementById('promptInput').value = scene.prompt || '';
+  document.getElementById('negInput').value = scene.negativePrompt || '';
+  document.getElementById('durationSelect').value = scene.duration || '8';
+  document.getElementById('aspectSelect').value = scene.aspect || '16:9';
+  refImages = [...(scene.refImages || [])];
+  renderRefStrip();
+  updateCostPreview();
+}
+
+function clearPanel(){
+  activeSceneId = null;
+  document.getElementById('titleInput').value = '';
+  document.getElementById('promptInput').value = '';
+  document.getElementById('negInput').value = '';
+  document.getElementById('durationSelect').value = '8';
+  document.getElementById('aspectSelect').value = '16:9';
+  refImages = [];
+  renderRefStrip();
+  updateCostPreview();
+}
+
+function updateCostPreview(){
+  const dur = parseFloat(document.getElementById('durationSelect').value || 8);
+  document.getElementById('costPreview').textContent = '≈ $' + (dur * costPerSecond).toFixed(2);
+}
+
+function renderRefStrip(){
+  const strip = document.getElementById('refStrip');
+  strip.innerHTML = '';
+  refImages.forEach((src, i)=>{
+    const div = document.createElement('div');
+    div.className = 'ref-thumb';
+    div.innerHTML = `<img src="${src}"><button data-i="${i}">×</button><div class="ref-badge">ref ${i+1}</div>`;
+    div.querySelector('button').onclick = (e)=>{ e.stopPropagation(); refImages.splice(i,1); renderRefStrip(); };
+    strip.appendChild(div);
+  });
+}
+
+function handleFiles(files){
+  const remaining = 3 - refImages.length;
+  Array.from(files).slice(0, remaining).forEach(file=>{
+    if(!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e=>{ refImages.push(e.target.result); renderRefStrip(); };
+    reader.readAsDataURL(file);
+  });
+}
+
+function bindStaticEvents(){
+  const zone = document.getElementById('uploadZone');
+  const fileInput = document.getElementById('fileInput');
+  zone.onclick = ()=> fileInput.click();
+  fileInput.onchange = e=> handleFiles(e.target.files);
+  ['dragover','dragenter'].forEach(ev=> zone.addEventListener(ev, e=>{ e.preventDefault(); zone.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(ev=> zone.addEventListener(ev, e=>{ e.preventDefault(); zone.classList.remove('dragover'); }));
+  zone.addEventListener('drop', e=>{ handleFiles(e.dataTransfer.files); });
+
+  document.getElementById('durationSelect').onchange = updateCostPreview;
+
+  document.querySelectorAll('.chip').forEach(chip=>{
+    chip.onclick = ()=>{
+      const p = document.getElementById('promptInput');
+      p.value = (p.value + ' ' + chip.dataset.add).trim();
+    };
+  });
+
+  document.querySelectorAll('.filter-tab').forEach(tab=>{
+    tab.onclick = ()=>{
+      document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      renderGrid();
+    };
+  });
+
+  document.getElementById('generateBtn').onclick = generateTake;
+  document.getElementById('enhanceBtn').onclick = enhancePrompt;
+}
+
+function render(){ renderGrid(); updateCostPreview(); updateHeaderCost(); }
+
+function updateHeaderCost(){
+  const cost = scenes.reduce((a,s)=> a + s.takes.reduce((b,t)=> b + (t.status!=='error' ? parseFloat(s.duration||8)*costPerSecond : 0), 0), 0);
+  document.getElementById('costHeader').textContent = '$' + cost.toFixed(2) + ' usados';
+}
+
+function sceneStatus(s){
+  if(s.takes.length===0) return 'empty';
+  if(s.takes.some(t=>t.status==='done')) return 'done';
+  if(s.takes.some(t=>t.status==='processing')) return 'processing';
+  return 'error';
+}
+
+function renderGrid(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  const newCard = document.createElement('div');
+  newCard.className = 'new-card';
+  newCard.innerHTML = `<span style="font-size:26px;">+</span><span>Nueva escena</span>`;
+  newCard.onclick = ()=>{ clearPanel(); };
+  grid.appendChild(newCard);
+
+  const filtered = scenes.filter(s=> currentFilter==='all' ? true : sceneStatus(s)===currentFilter);
+
+  if(scenes.length===0){
+    const hint = document.createElement('div');
+    hint.className = 'empty-hint';
+    hint.style.gridColumn = '1 / -1';
+    hint.innerHTML = `<h3>Todavía no hay escenas</h3><p>Completa el panel de la izquierda y presiona Generar toma.</p>`;
+  }
+
+  filtered.forEach(s=>{
+    const status = sceneStatus(s);
+    const lastDone = [...s.takes].reverse().find(t=>t.status==='done');
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-thumb">
+        ${s.refImages && s.refImages[0] ? `<img src="${s.refImages[0]}">` : `<span class="placeholder">▶</span>`}
+        <span class="badge">${brandTag(s.number)}</span>
+        <span class="status ${status}">${status==='done'?'Lista':status==='processing'?'Generando':status==='error'?'Error':'Sin generar'}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${escapeHtml(s.title || 'Sin título')}</div>
+        <div class="card-meta">${s.duration}s · ${s.aspect} · ${s.takes.length} toma(s)</div>
+      </div>
+    `;
+    card.onclick = ()=> loadIntoPanel(s);
+    grid.appendChild(card);
+  });
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+async function generateTake(){
+  const prompt = document.getElementById('promptInput').value.trim();
+  if(!prompt){ alert('Escribe un prompt antes de generar.'); return; }
+
+  let scene;
+  if(activeSceneId){
+    scene = scenes.find(s=>s.id===activeSceneId);
+  } else {
+    scene = newScene(scenes.length + 1);
+    scenes.push(scene);
+    activeSceneId = scene.id;
+  }
+
+  scene.title = document.getElementById('titleInput').value.trim() || 'Escena sin título';
+  scene.prompt = prompt;
+  scene.negativePrompt = document.getElementById('negInput').value.trim();
+  scene.duration = document.getElementById('durationSelect').value;
+  scene.aspect = document.getElementById('aspectSelect').value;
+  scene.refImages = [...refImages];
+
+  const take = { id: uid(), status:'processing', timestamp: new Date().toLocaleString('es-PE'), duration: scene.duration, aspect: scene.aspect };
+  scene.takes.push(take);
+  persist.save();
+  render();
+
+  // Integración real: fetch('/.netlify/functions/generate-video', { method:'POST', body: JSON.stringify({
+  //   prompt: scene.prompt, negativePrompt: scene.negativePrompt, duration: scene.duration,
+  //   aspect: scene.aspect, referenceImages: scene.refImages }) });
+
+  setTimeout(()=>{ take.status = 'done'; persist.save(); render(); }, 2000);
+}
+
+async function enhancePrompt(){
+  alert('Conecta /.netlify/functions/enhance-prompt con tu API key de Anthropic para activar esto.');
+}
+
+init();
+</script>
+</body>
+</html>
