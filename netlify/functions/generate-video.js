@@ -32,14 +32,25 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Falta el prompt.' }) };
     }
 
+    // El frontend manda las imágenes como dataURL (data:image/png;base64,....).
+    // La API espera bytesBase64Encoded + mimeType por separado.
+    function parseDataUrl(dataUrl){
+      const match = /^data:(image\/[a-zA-Z]+);base64,(.+)$/.exec(dataUrl);
+      if(!match) return null;
+      return { bytesBase64Encoded: match[2], mimeType: match[1] };
+    }
+
+    const parsedRefs = (referenceImages || [])
+      .slice(0, 3)
+      .map(parseDataUrl)
+      .filter(Boolean);
+
     const requestBody = {
       instances: [
         {
           prompt: prompt,
           ...(negativePrompt ? { negativePrompt } : {}),
-          ...(referenceImages && referenceImages.length
-            ? { referenceImages: referenceImages.slice(0, 3) } // Veo 3.1 admite hasta 3
-            : {})
+          ...(parsedRefs.length ? { referenceImages: parsedRefs.map(img => ({ image: img })) } : {})
         }
       ],
       parameters: {
