@@ -444,15 +444,22 @@ function renderGrid(){
     const lastDone = [...s.takes].reverse().find(t=>t.status==='done');
     const card = document.createElement('div');
     card.className = 'card';
+    const thumbContent = lastDone && lastDone.videoUri
+      ? `<video src="${lastDone.videoUri}" muted loop autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>`
+      : (s.refImages && s.refImages[0] ? `<img src="${s.refImages[0]}">` : `<span class="placeholder">▶</span>`);
+
+    const lastError = [...s.takes].reverse().find(t=>t.status==='error');
+
     card.innerHTML = `
       <div class="card-thumb">
-        ${s.refImages && s.refImages[0] ? `<img src="${s.refImages[0]}">` : `<span class="placeholder">▶</span>`}
+        ${thumbContent}
         <span class="badge">${brandTag(s.number)}</span>
         <span class="status ${status}">${status==='done'?'Lista':status==='processing'?'Generando':status==='error'?'Error':'Sin generar'}</span>
       </div>
       <div class="card-body">
         <div class="card-title">${escapeHtml(s.title || 'Sin título')}</div>
         <div class="card-meta">${s.duration}s · ${s.aspect} · ${s.takes.length} toma(s)</div>
+        ${status==='error' && lastError ? `<div style="color:var(--err); font-size:0.7rem; margin-top:0.4rem;">${escapeHtml(lastError.errorMessage || 'Error al generar')}</div>` : ''}
       </div>
     `;
     card.onclick = ()=> loadIntoPanel(s);
@@ -491,11 +498,66 @@ async function generateTake(){
   persist.save();
   render();
 
-  // Integración real: fetch('/.netlify/functions/generate-video', { method:'POST', body: JSON.stringify({
-  //   prompt: scene.prompt, negativePrompt: scene.negativePrompt, duration: scene.duration,
-  //   aspect: scene.aspect, referenceImages: scene.refImages }) });
+  try{
+    const res = await fetch('/.netlify/functions/generate-video', {
+      method: 'POST',
+      body: JSON.stringify({
+        prompt: scene.prompt,
+        negativePrompt: scene.negativePrompt,
+        duration: scene.duration,
+        aspect: scene.aspect,
+        referenceImages: scene.refImages
+      })
+    });
+    const data = await res.json();
 
-  setTimeout(()=>{ take.status = 'done'; persist.save(); render(); }, 2000);
+    if(!res.ok || data.error){
+      take.status = 'error';
+      take.errorMessage = data.error || 'Error desconocido';
+      persist.save(); render();
+      return;
+    }
+
+    pollTakeStatus(scene, take, data.operationName);
+
+  } catch(err){
+    take.status = 'error';
+    take.errorMessage = err.message;
+    persist.save(); render();
+  }
+}
+
+async function pollTakeStatus(scene, take, operationName){
+  const maxAttempts = 40; // ~ 6-7 minutos con intervalo de 10s
+  let attempts = 0;
+
+  const interval = setInterval(async ()=>{
+    attempts++;
+    try{
+      const res = await fetch('/.netlify/functions/check-video-status?operationName=' + encodeURIComponent(operationName));
+      const data = await res.json();
+
+      if(data.status === 'done'){
+        clearInterval(interval);
+        take.status = 'done';
+        take.videoUri = data.videoUri;
+        persist.save(); render();
+      } else if(data.status === 'error'){
+        clearInterval(interval);
+        take.status = 'error';
+        take.errorMessage = data.message || 'Error generando el video';
+        persist.save(); render();
+      } else if(attempts >= maxAttempts){
+        clearInterval(interval);
+        take.status = 'error';
+        take.errorMessage = 'Tiempo de espera agotado. Revisa el estado directamente en Google AI Studio.';
+        persist.save(); render();
+      }
+      // si sigue 'processing', no hacemos nada y esperamos el próximo intervalo
+    } catch(err){
+      // error de red puntual: no cancelamos el polling, reintenta en el próximo intervalo
+    }
+  }, 10000);
 }
 
 async function enhancePrompt(){
