@@ -10,7 +10,7 @@
 // en vez de bloquear la función esperando (Netlify tiene límite de tiempo de ejecución).
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MODEL = 'veo-3.1-generate-001'; // usa '-preview' si aún no tienes acceso a la versión estable
+const MODEL = 'veo-3.1-generate-preview'; // usa '-preview' si aún no tienes acceso a la versión estable
 const BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:predictLongRunning`;
 
 exports.handler = async (event) => {
