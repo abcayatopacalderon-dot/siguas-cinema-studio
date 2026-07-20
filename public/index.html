@@ -271,6 +271,15 @@
       </div>
     </div>
 
+    <div>
+      <label class="field-label">Calidad</label>
+      <select id="resolutionSelect" style="width:100%;">
+        <option value="720p" selected>720p — más económico</option>
+        <option value="1080p">1080p — Full HD (requiere 8s)</option>
+        <option value="4k">4K — máxima calidad, más costoso</option>
+      </select>
+    </div>
+
     <button class="enhance-btn" id="enhanceBtn">Enriquecer prompt con Claude</button>
 
     <button class="generate-btn" id="generateBtn">
@@ -297,7 +306,7 @@ let scenes = [];
 let activeSceneId = null;
 let refImages = []; // dataURLs for the scene currently being edited
 let currentFilter = 'all';
-const costPerSecond = 0.40;
+const costPerSecond = { '720p': 0.40, '1080p': 0.55, '4k': 1.20 }; // ajustar según tarifa vigente de Google
 
 const persist = {
   async load(){
@@ -314,7 +323,7 @@ function uid(){ return Math.random().toString(36).slice(2,9); }
 function brandTag(n){ return 'ST-' + String(1000 + n * 137 % 9000).padStart(4,'0'); }
 
 function newScene(n){
-  return { id: uid(), number:n, title:'', prompt:'', negativePrompt:'', duration:'8', aspect:'16:9', refImages:[], takes:[] };
+  return { id: uid(), number:n, title:'', prompt:'', negativePrompt:'', duration:'8', aspect:'16:9', resolution:'720p', refImages:[], takes:[] };
 }
 
 async function init(){
@@ -331,6 +340,7 @@ function loadIntoPanel(scene){
   document.getElementById('negInput').value = scene.negativePrompt || '';
   document.getElementById('durationSelect').value = scene.duration || '8';
   document.getElementById('aspectSelect').value = scene.aspect || '16:9';
+  document.getElementById('resolutionSelect').value = scene.resolution || '720p';
   refImages = [...(scene.refImages || [])];
   renderRefStrip();
   updateCostPreview();
@@ -343,6 +353,7 @@ function clearPanel(){
   document.getElementById('negInput').value = '';
   document.getElementById('durationSelect').value = '8';
   document.getElementById('aspectSelect').value = '16:9';
+  document.getElementById('resolutionSelect').value = '720p';
   refImages = [];
   renderRefStrip();
   updateCostPreview();
@@ -350,7 +361,8 @@ function clearPanel(){
 
 function updateCostPreview(){
   const dur = parseFloat(document.getElementById('durationSelect').value || 8);
-  document.getElementById('costPreview').textContent = '≈ $' + (dur * costPerSecond).toFixed(2);
+  const res = document.getElementById('resolutionSelect').value || '720p';
+  document.getElementById('costPreview').textContent = '≈ $' + (dur * costPerSecond[res]).toFixed(2);
 }
 
 function renderRefStrip(){
@@ -385,6 +397,7 @@ function bindStaticEvents(){
   zone.addEventListener('drop', e=>{ handleFiles(e.dataTransfer.files); });
 
   document.getElementById('durationSelect').onchange = updateCostPreview;
+  document.getElementById('resolutionSelect').onchange = updateCostPreview;
 
   document.querySelectorAll('.chip').forEach(chip=>{
     chip.onclick = ()=>{
@@ -409,7 +422,7 @@ function bindStaticEvents(){
 function render(){ renderGrid(); updateCostPreview(); updateHeaderCost(); }
 
 function updateHeaderCost(){
-  const cost = scenes.reduce((a,s)=> a + s.takes.reduce((b,t)=> b + (t.status!=='error' ? parseFloat(s.duration||8)*costPerSecond : 0), 0), 0);
+  const cost = scenes.reduce((a,s)=> a + s.takes.reduce((b,t)=> b + (t.status!=='error' ? parseFloat(s.duration||8)*costPerSecond[s.resolution||'720p'] : 0), 0), 0);
   document.getElementById('costHeader').textContent = '$' + cost.toFixed(2) + ' usados';
 }
 
@@ -445,7 +458,7 @@ function renderGrid(){
     const card = document.createElement('div');
     card.className = 'card';
     const thumbContent = lastDone && lastDone.videoUri
-      ? `<video src="${lastDone.videoUri}" muted loop autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>`
+      ? `<video src="/.netlify/functions/video-proxy?uri=${encodeURIComponent(lastDone.videoUri)}" muted loop autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>`
       : (s.refImages && s.refImages[0] ? `<img src="${s.refImages[0]}">` : `<span class="placeholder">▶</span>`);
 
     const lastError = [...s.takes].reverse().find(t=>t.status==='error');
@@ -458,7 +471,7 @@ function renderGrid(){
       </div>
       <div class="card-body">
         <div class="card-title">${escapeHtml(s.title || 'Sin título')}</div>
-        <div class="card-meta">${s.duration}s · ${s.aspect} · ${s.takes.length} toma(s)</div>
+        <div class="card-meta">${s.duration}s · ${s.aspect} · ${s.resolution||'720p'} · ${s.takes.length} toma(s)</div>
         ${status==='error' && lastError ? `<div style="color:var(--err); font-size:0.7rem; margin-top:0.4rem;">${escapeHtml(lastError.errorMessage || 'Error al generar')}</div>` : ''}
       </div>
     `;
@@ -491,6 +504,7 @@ async function generateTake(){
   scene.negativePrompt = document.getElementById('negInput').value.trim();
   scene.duration = document.getElementById('durationSelect').value;
   scene.aspect = document.getElementById('aspectSelect').value;
+  scene.resolution = document.getElementById('resolutionSelect').value;
   scene.refImages = [...refImages];
 
   const take = { id: uid(), status:'processing', timestamp: new Date().toLocaleString('es-PE'), duration: scene.duration, aspect: scene.aspect };
@@ -506,6 +520,7 @@ async function generateTake(){
         negativePrompt: scene.negativePrompt,
         duration: scene.duration,
         aspect: scene.aspect,
+        resolution: scene.resolution,
         referenceImages: scene.refImages
       })
     });
