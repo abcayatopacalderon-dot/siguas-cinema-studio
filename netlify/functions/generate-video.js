@@ -10,7 +10,7 @@
 // en vez de bloquear la función esperando (Netlify tiene límite de tiempo de ejecución).
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MODEL = 'veo-3.1-generate-preview'; // usa '-preview' si aún no tienes acceso a la versión estable
+const MODEL = 'veo-3.1-generate-preview'; // nombre correcto para la Gemini API (no Vertex AI)
 const BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:predictLongRunning`;
 
 exports.handler = async (event) => {
@@ -26,7 +26,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { prompt, negativePrompt, duration, aspect, referenceImages } = JSON.parse(event.body || '{}');
+    const { prompt, negativePrompt, duration, aspect, resolution, referenceImages } = JSON.parse(event.body || '{}');
 
     if (!prompt || !prompt.trim()) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Falta el prompt.' }) };
@@ -55,7 +55,8 @@ exports.handler = async (event) => {
       ],
       parameters: {
         aspectRatio: aspect || '16:9',
-        durationSeconds: parseInt(duration || '8', 10)
+        durationSeconds: parseInt(duration || '8', 10),
+        resolution: resolution || '720p' // '720p' | '1080p' | '4k' — 1080p suele requerir duración de 8s
       }
     };
 
